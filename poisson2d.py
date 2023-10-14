@@ -57,7 +57,6 @@ class Poisson2D:
     def get_boundary_indices(self):
         """Return indices of vectorized matrix that belongs to the boundary"""
         indices = np.arange(len(self.laplace))
-        
         return
 
     def assemble(self):

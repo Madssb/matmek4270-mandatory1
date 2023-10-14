@@ -32,20 +32,33 @@ class Poisson2D:
 
     def create_mesh(self, N):
         """Create 2D mesh and store in self.xij and self.yij"""
-        # self.xij, self.yij ...
-        raise NotImplementedError
+        self.xij, self.yij = np.meshgrid(np.linspace(0, self.L, N+1),
+                                         np.linspace(0, self.L, N+1),
+                                         indexing='ij')
+        self.N = N
+        self.h = self.L/N
 
     def D2(self):
         """Return second order differentiation matrix"""
-        raise NotImplementedError
+        sup_n_sub_diag = np.full(self.N, fill_value=1/self.h**2, dtype=float)
+        diag = np.full(self.N+1, fill_value=-2/self.h**2, dtype=float)
+        diff_matrix = (np.diag(diag) + np.diag(sup_n_sub_diag, k=1)
+                       + np.diag(sup_n_sub_diag, k=-1))
+        diff_matrix[0, :4] = 2, -5, 4, -1
+        diff_matrix[-1, -4:] = -1, 4, -5, 2
+        return diff_matrix
 
     def laplace(self):
         """Return vectorized Laplace operator"""
-        raise NotImplementedError
+        diff_matrix = self.D2
+        I = sparse(self.N + 1)
+        return sparse.kron(diff_matrix, I) + sparse.kron(diff_matrix, self.D2)
 
     def get_boundary_indices(self):
         """Return indices of vectorized matrix that belongs to the boundary"""
-        raise NotImplementedError
+        indices = np.arange(len(self.laplace))
+        
+        return
 
     def assemble(self):
         """Return assembled matrix A and right hand side vector b"""

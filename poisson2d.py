@@ -32,41 +32,51 @@ class Poisson2D:
 
     def create_mesh(self, N):
         """Create 2D mesh and store in self.xij and self.yij"""
-        self.xij, self.yij = np.meshgrid(np.linspace(0, self.L, N+1),
-                                         np.linspace(0, self.L, N+1),
+        self.xy = np.linspace(0, self.L, N+1)
+        self.xij, self.yij = np.meshgrid(self.xy,
+                                         self.xy,
                                          indexing='ij')
         self.N = N
         self.h = self.L/N
 
     def D2(self):
         """Return second order differentiation matrix"""
-        sup_n_sub_diag = np.full(self.N, fill_value=1/self.h**2, dtype=float)
-        diag = np.full(self.N+1, fill_value=-2/self.h**2, dtype=float)
-        diff_matrix = (np.diag(diag) + np.diag(sup_n_sub_diag, k=1)
-                       + np.diag(sup_n_sub_diag, k=-1))
-        diff_matrix[0, :4] = 2, -5, 4, -1
-        diff_matrix[-1, -4:] = -1, 4, -5, 2
-        return diff_matrix
+        D = sparse.diags([1, -2, 1], [-1, 0, 1], (self.N+1, self.N+1), 'lil')
+        D[0, :4] = 2, -5, 4, -1
+        D[-1, -4:] = -1, 4, -5, 2
+        return D/self.h
 
     def laplace(self):
         """Return vectorized Laplace operator"""
-        diff_matrix = self.D2
-        I = sparse(self.N + 1)
-        return sparse.kron(diff_matrix, I) + sparse.kron(diff_matrix, self.D2)
+        D2 = self.D2()
+        I = sparse.eye(self.N + 1)
+        return (sparse.kron(D2, I) + sparse.kron(I, D2))
 
     def get_boundary_indices(self):
         """Return indices of vectorized matrix that belongs to the boundary"""
-        indices = np.arange(len(self.laplace))
-        return
+        indices = np.ones((self.N, self.N))
+        indices[1:-1,1:-1] = 0
+        bnds = np.where(indices.ravel() == 1)[0]      
+        return bnds
 
     def assemble(self):
         """Return assembled matrix A and right hand side vector b"""
         # return A, b
-        raise NotImplementedError
+        A = self.laplace().tolil()
+        bnds = self.get_boundary_indices()
+        for i in bnds:
+            A[i] = 0
+            A[i, i] = 1
+        A = A.tocsr()
+        F = sp.lambdify((x,y), self.f)(self.xij, self.yij)
+        self.u_exact = sp.lambdify((x,y), self.ue)(self.xij, self.yij)
+        b = F.ravel()
+        b[bnds] = self.u_exact.ravel()[bnds]
+        return A, b
 
     def l2_error(self, u):
         """Return l2-error norm"""
-        raise NotImplementedError
+        return np.sqrt(self.h * self.h * np.sum((self.u_exact - u)**2))
 
     def __call__(self, N):
         """Solve Poisson's equation.
@@ -88,7 +98,7 @@ class Poisson2D:
 
     def convergence_rates(self, m=6):
         """Compute convergence rates for a range of discretizations
-
+    
         Parameters
         ----------
         m : int
@@ -125,7 +135,9 @@ class Poisson2D:
         The value of u(x, y)
 
         """
-        raise NotImplementedError
+        from scipy.interpolate import RectBivariateSpline
+        object =  RectBivariateSpline(self.xy,self.xy,self.U)
+        return object(x,y)
 
 def test_convergence_poisson2d():
     # This exact solution is NOT zero on the entire boundary

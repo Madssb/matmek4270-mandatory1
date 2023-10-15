@@ -44,7 +44,7 @@ class Poisson2D:
         D = sparse.diags([1, -2, 1], [-1, 0, 1], (self.N+1, self.N+1), 'lil')
         D[0, :4] = 2, -5, 4, -1
         D[-1, -4:] = -1, 4, -5, 2
-        return D/self.h
+        return D/self.h**2
 
     def laplace(self):
         """Return vectorized Laplace operator"""
@@ -52,9 +52,9 @@ class Poisson2D:
         I = sparse.eye(self.N + 1)
         return (sparse.kron(D2, I) + sparse.kron(I, D2))
 
-    def get_boundary_indices(self):
+    def get_boundary_indices(self): 
         """Return indices of vectorized matrix that belongs to the boundary"""
-        indices = np.ones((self.N, self.N))
+        indices = np.ones((self.N+1, self.N+1))
         indices[1:-1,1:-1] = 0
         bnds = np.where(indices.ravel() == 1)[0]      
         return bnds
@@ -67,7 +67,7 @@ class Poisson2D:
         for i in bnds:
             A[i] = 0
             A[i, i] = 1
-        A = A.tocsr()
+        #A = A.tocsr()
         F = sp.lambdify((x,y), self.f)(self.xij, self.yij)
         self.u_exact = sp.lambdify((x,y), self.ue)(self.xij, self.yij)
         b = F.ravel()
@@ -93,7 +93,7 @@ class Poisson2D:
         """
         self.create_mesh(N)
         A, b = self.assemble()
-        self.U = sparse.linalg.spsolve(A, b.flatten()).reshape((N+1, N+1))
+        self.U = sparse.linalg.spsolve(A.tocsr(), b.flatten()).reshape((N+1, N+1))
         return self.U
 
     def convergence_rates(self, m=6):

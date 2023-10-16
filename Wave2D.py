@@ -10,9 +10,9 @@ class Wave2D:
 
     def create_mesh(self, N, sparse=False):
         """Create 2D mesh and store in self.xij and self.yij"""
-        self.xij, self.yij = np.meshgrid(np.linspace(0,1,N+1), np.meshgrid(0,1,N+1), indexing='ij', sparse=sparse)
-        self.h = 1/N
-
+        self.xij, self.yij = np.meshgrid(np.linspace(0,1,N+1),
+                                         np.linspace(0,1,N+1), indexing='ij',
+                                         sparse=sparse)
 
     def D2(self, N):
         """Return second order differentiation matrix"""
@@ -43,14 +43,13 @@ class Wave2D:
         mx, my : int
             Parameters for the standing wave
         """
-        self.Unp1 = np.zeros((N+1,N+1))
-        self.Un = np.zeros_like(self.Unp1)
-        self.Unm1 = np.zeros_like(self.Unp1)
+        self.Unp1 = np.zeros((N+1,N+1), dtype=float)
+        self.Un = np.zeros_like(self.Unp1, dtype=float)
+        self.Unm1 = np.zeros_like(self.Unp1, dtype=float)
         self.u_exact = sp.lambdify((x,y,t), self.ue(mx, my))
-        self.create_mesh(N)
-        self.Unm1[:] = self.u_exact(self.xij, self.yij, 0)
+        self.Unm1[:] = self.u_exact(self.xij, self.yij, 0).astype(float)
         D2 = self.D2(N)
-        self.Un[:] = self.Unm1 + self.c**2 *self.dt**2 / 2* (D2 @ self.Unm1 + self.Unm1 @ D2.T)
+        self.Un[:] = self.Unm1 + self.c**2 *self.dt**2 / 2 * (D2 @ self.Unm1 + self.Unm1 @ D2.T)
 
     @property
     def dt(self):
@@ -67,7 +66,8 @@ class Wave2D:
         t0 : number
             The time of the comparison
         """
-        return np.sqrt(self.h**2 *np.sum(u - self.uexact(self.xij, self.yij, t0)))
+        assert not np.isnan(u.any())
+        return np.sqrt(self.h**2 * np.sum((u - self.u_exact(self.xij, self.yij, t0)**2)))
 
     def apply_bcs(self):
         self.Unp1[0] = 0
@@ -100,29 +100,27 @@ class Wave2D:
         If store_data > 0, then return a dictionary with key, value = timestep, solution
         If store_data == -1, then return the two-tuple (h, l2-error)
         """
+        self.create_mesh(N)
+        self.h = 1 / N
         self.c = c
+        self.cfl = cfl
         self.mx = mx
         self.my = my
         self.initialize(N, mx, my)
         D2 = self.D2(N)
-        dt = self.dt()
         plot_data = {}
         l2_list = []
         for i in range(1, Nt):
             l2_list.append(self.l2_error(self.Un, i * self.dt))
-            self.Unp1[:] = 2 * self.Un - self.Unm1 + (c * dt) **2 * (D2 @ self.Un + self.Un @ D2.T)
+            self.Unp1[:] = 2 * self.Un - self.Unm1 + (self.c * self.dt) **2 * (D2 @ self.Un + self.Un @ D2.T)
             self.apply_bcs()
             self.Unm1[:] = self.Un
             self.Un[:] = self.Unp1
-            if i % store_data:
-                plot_data[i] = self.unm1.copy()
+            if i % store_data == 0:
+                plot_data[i] = self.Unm1.copy()
         if store_data == -1:
-            return self.dx, l2_list
+            return self.h, l2_list
         return self.xij, self.yij, plot_data
-
-
-
-
 
     def convergence_rates(self, m=4, cfl=0.1, Nt=10, mx=3, my=3):
         """Compute convergence rates for a range of discretizations
@@ -161,6 +159,8 @@ class Wave2D_Neumann(Wave2D):
 
     def D2(self, N):
         raise NotImplementedError
+        #D = sparse.diags([1, -2, 1], [-1, 0, 1], (N+1,N+1), 'lil')
+        #D[]
 
     def ue(self, mx, my):
         raise NotImplementedError
@@ -180,3 +180,7 @@ def test_convergence_wave2d_neumann():
 
 def test_exact_wave2d():
     raise NotImplementedError
+
+# if __name__ == '__main__':
+#     test_convergence_wave2d()
+

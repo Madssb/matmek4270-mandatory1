@@ -67,7 +67,7 @@ class Wave2D:
             The time of the comparison
         """
         assert not np.isnan(u.any())
-        return np.sqrt(self.h**2 * np.sum((u - self.u_exact(self.xij, self.yij, t0)**2)))
+        return np.sqrt(self.h**2 * np.sum((u - self.u_exact(self.xij, self.yij, t0))**2))
 
     def apply_bcs(self):
         self.Unp1[0] = 0

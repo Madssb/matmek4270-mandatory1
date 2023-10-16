@@ -66,7 +66,6 @@ class Wave2D:
         t0 : number
             The time of the comparison
         """
-        assert not np.isnan(u.any())
         return np.sqrt(self.h**2 * np.sum((u - self.u_exact(self.xij, self.yij, t0))**2))
 
     def apply_bcs(self):
@@ -109,13 +108,14 @@ class Wave2D:
         self.initialize(N, mx, my)
         D2 = self.D2(N)
         plot_data = {}
-        l2_list = []
+        l2_list = [self.l2_error(self.Un, self.dt)]
         for i in range(1, Nt):
-            l2_list.append(self.l2_error(self.Un, i * self.dt))
+            
             self.Unp1[:] = 2 * self.Un - self.Unm1 + (self.c * self.dt) **2 * (D2 @ self.Un + self.Un @ D2.T)
             self.apply_bcs()
             self.Unm1[:] = self.Un
             self.Un[:] = self.Unp1
+            l2_list.append(self.l2_error(self.Un, (i+1) * self.dt))
             if i % store_data == 0:
                 plot_data[i] = self.Unm1.copy()
         if store_data == -1:
@@ -183,7 +183,7 @@ def test_exact_wave2d():
     sol = Wave2D()
     sol_neumann = Wave2D_Neumann()
     Nt = 15
-    N = 60
+    N = 1000
     m = 2
     cfl = 1/np.sqrt(2)
     h, E = sol_neumann(N, Nt, mx=m, my=m,  store_data=-1)

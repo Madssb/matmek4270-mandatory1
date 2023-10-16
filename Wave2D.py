@@ -190,6 +190,23 @@ def test_exact_wave2d():
     assert np.max(E) < 1e-5
     h, E = sol(N, Nt, mx=m, my=m, store_data=-1)
     assert np.max(E) < 1e-5
-# if __name__ == '__main__':
-#     test_convergence_wave2d()
+
+
+def animate():
+    instance = Wave2D_Neumann()
+    data = instance(100, 100, cfl=1/np.sqrt(2), mx=2, my=2, store_data=2)
+    xij, yij = instance.xij, instance.yij
+    import matplotlib.animation as animation
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    frames = []
+    for n, val in data.items():
+        frame = ax.plot_wireframe(xij, yij, val, rstride=2, cstride=2)
+        frames.append([frame])
+
+    ani = animation.ArtistAnimation(fig, frames, interval=400, blit=True,
+                                    repeat_delay=1000)
+    ani.save('wavemovie2d.apng', writer='pillow', fps=5)
+
+if __name__ == '__main__':
+    animate()
 

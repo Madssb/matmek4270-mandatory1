@@ -158,15 +158,16 @@ class Wave2D:
 class Wave2D_Neumann(Wave2D):
 
     def D2(self, N):
-        raise NotImplementedError
-        #D = sparse.diags([1, -2, 1], [-1, 0, 1], (N+1,N+1), 'lil')
-        #D[]
+        D = sparse.diags([1, -2, 1], [-1, 0, 1], (N+1,N+1), 'lil')
+        D[0, :2] = -2, 2
+        D[-1, -2:] = 2, -2
+        return D/self.h**2
 
     def ue(self, mx, my):
-        raise NotImplementedError
+        return sp.cos(mx*sp.pi*x)*sp.cos(my*sp.pi*y)*sp.cos(self.w*t)
 
     def apply_bcs(self):
-        raise NotImplementedError
+        pass
 
 def test_convergence_wave2d():
     sol = Wave2D()
@@ -179,8 +180,16 @@ def test_convergence_wave2d_neumann():
     assert abs(r[-1]-2) < 0.05
 
 def test_exact_wave2d():
-    raise NotImplementedError
-
+    sol = Wave2D()
+    sol_neumann = Wave2D_Neumann()
+    Nt = 15
+    N = 60
+    m = 2
+    cfl = 1/np.sqrt(2)
+    h, E = sol_neumann(N, Nt, mx=m, my=m,  store_data=-1)
+    assert np.max(E) < 1e-5
+    h, E = sol(N, Nt, mx=m, my=m, store_data=-1)
+    assert np.max(E) < 1e-5
 # if __name__ == '__main__':
 #     test_convergence_wave2d()
 

@@ -194,8 +194,7 @@ def test_exact_wave2d():
 
 def animate():
     instance = Wave2D_Neumann()
-    data = instance(100, 100, cfl=1/np.sqrt(2), mx=2, my=2, store_data=2)
-    xij, yij = instance.xij, instance.yij
+    xij, yij,  data =instance(100, 100, cfl=1/np.sqrt(2), mx=2, my=2, store_data=2)
     import matplotlib.animation as animation
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     frames = []
@@ -205,7 +204,7 @@ def animate():
 
     ani = animation.ArtistAnimation(fig, frames, interval=400, blit=True,
                                     repeat_delay=1000)
-    ani.save('wavemovie2d.apng', writer='pillow', fps=5)
+    ani.save('report/neumannwave.gif', writer='pillow', fps=5)
 
 if __name__ == '__main__':
     animate()
